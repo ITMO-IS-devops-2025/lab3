@@ -1,0 +1,57 @@
+- name: Start nginx on web servers
+  hosts: web
+  become: true
+
+  vars:
+    my_app_repo: https://github.com/mdn/django-locallibrary-tutorial
+    my_app_repo_dest: /tmp/django-locallibrary-tutorial
+    my_app_static_files_path_relative_to_repo: catalog/static
+    my_nginx_app_listen_port: 81
+    my_nginx_app_domain: app
+    my_nginx_static_files_general_path: /var/www
+    my_nginx_app_static_files_path: "{{ my_nginx_static_files_general_path }}/{{ my_nginx_app_domain }}"
+
+  vars_files:
+    - vars/common_vars.yml
+
+  tasks:
+    - name: Checkout app repository to get static files
+      ansible.builtin.git:
+        repo: "{{ my_app_repo }}"
+        dest: "{{ my_app_repo_dest }}"
+        version: d6ee18ada7603ce65d3ced7fd4979f564564d3c5
+
+    - name: Include nginx role
+      ansible.builtin.include_role:
+        name: nginx
+      vars:
+        nginx_static_files_general_path: "{{ my_nginx_static_files_general_path }}"
+        nginx_server_blocks_domain_to_conf_template_and_static_files_path_dict:
+          app:
+            conf_template: "{{ inventory_dir }}/templates/app.conf.j2"
+            static_files_path: "{{ my_app_repo_dest }}/{{ my_app_static_files_path_relative_to_repo }}"
+
+- name: Start django app on app servers
+  hosts: app
+  become: true
+
+  vars:
+    my_django_app_container_name: app
+    my_django_app_image: timurbabs/django
+
+  vars_files:
+    - vars/common_vars.yml
+
+  tasks:
+    - name: Include docker role
+      ansible.builtin.include_role:
+        name: docker
+
+    - name: Recreate django app container
+      community.docker.docker_container:
+        name: "{{ my_django_app_container_name }}"
+        image: "{{ my_django_app_image }}"
+        state: started
+        recreate: true
+        ports:
+          - "{{ my_app_port }}:8000"

@@ -1,0 +1,5 @@
+.vagrant
+.vscode
+vagrant-config.rb
+roles/docker
+roles/nginx

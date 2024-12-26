@@ -1,0 +1,4 @@
+- src: https://github.com/ITMO-IS-devops-2025/docker
+
+- name: nginx
+  src: https://github.com/ITMO-IS-devops-2025/ansible-role-nginx
